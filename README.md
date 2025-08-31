@@ -11,6 +11,7 @@
     - Title & Description
   - Movie Suggestions
     - Movies Lists × N
+     - MoviesCard * N
 
 - **NetflixGPT**
   - Search Bar
