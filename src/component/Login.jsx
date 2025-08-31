@@ -8,12 +8,10 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { auth } from "../firebase";
-import { useNavigate, Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { addUser, removeUser } from "../utils/userSlice";
+import { addUser } from "../utils/userSlice";
 
 function Login() {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -29,10 +27,7 @@ function Login() {
   };
 
   const handleValidation = () => {
-    const message = checkValidate(
-      email.current.value,
-      password.current.value
-    );
+    const message = checkValidate(email.current.value, password.current.value);
     setErrorMessage(message);
     if (message) return;
 
@@ -45,8 +40,6 @@ function Login() {
       )
         .then((userCredential) => {
           const user = userCredential.user;
-
-          // Update display name & photo
           updateProfile(auth.currentUser, {
             displayName: name.current.value,
             photoURL:
@@ -54,16 +47,7 @@ function Login() {
           })
             .then(() => {
               const { uid, email, displayName, photoURL } = user;
-              dispatch(
-                addUser({
-                  uid,
-                  email,
-                  displayName,
-                  photoURL,
-                })
-              );
-              setIsSignInForm(!isSignInForm);
-              navigate("/");
+              dispatch(addUser({ uid, email, displayName, photoURL }));
             })
             .catch((error) => {
               console.error("Profile update failed:", error);
@@ -79,13 +63,9 @@ function Login() {
         auth,
         email.current.value,
         password.current.value
-      )
-        .then(() => {
-          navigate("/browse");
-        })
-        .catch((error) => {
-          setErrorMessage(error.code + " - " + error.message);
-        });
+      ).catch((error) => {
+        setErrorMessage(error.code + " - " + error.message);
+      });
     }
   };
 
@@ -95,7 +75,7 @@ function Login() {
       <div
         className="min-h-screen flex items-center justify-center
                    bg-[url('https://assets.nflxext.com/ffe/siteui/vlv3/cb72daa5-bd8d-408b-b949-1eaef000c377/web/IN-en-20250825-TRIFECTA-perspective_a3209894-0b01-4ddb-b57e-f32165e20a3f_large.jpg')]
-                   bg-cover"
+                   bg-cover bg-fixed bg-center"
       >
         <div className="bg-black/75 p-10 rounded w-full max-w-sm shadow-lg text-white">
           <h1 className="text-3xl font-bold mb-6">
@@ -204,7 +184,7 @@ function Login() {
 
             <button
               type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-semibold"
+              className="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-semibold hover:cursor-pointer"
             >
               {isSignInForm ? "Sign In" : "Sign Up"}
             </button>
@@ -220,13 +200,17 @@ function Login() {
             </a>
           </div>
 
-          <div className="text-center text-sm" onClick={toggleSignInForm}>
+          <div className="text-center text-sm">
             <span className="text-gray-400">
               {isSignInForm ? "New to Netflix?" : "Already registered?"}
             </span>{" "}
-            <Link to="#" className="text-white hover:underline">
+            <button
+              type="button"
+              onClick={toggleSignInForm}
+              className="text-white hover:underline"
+            >
               {isSignInForm ? "Sign up now" : "Sign In now"}
-            </Link>
+            </button>
           </div>
         </div>
       </div>
