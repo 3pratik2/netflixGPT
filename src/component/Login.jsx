@@ -2,24 +2,92 @@ import { useRef, useState } from "react";
 import Header from "./Header";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { checkValidate } from "../utils/Validate";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { auth } from "../firebase";
+import { useNavigate, Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { addUser, removeUser } from "../utils/userSlice";
 
 function Login() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignInForm,setIsSignInForm] = useState(true);
-  const [errorMessage,setErrorMessage] = useState(null);
-  const email=useRef(null);
-  const password=useRef(null); 
+  const [isSignInForm, setIsSignInForm] = useState(true);
+  const [errorMessage, setErrorMessage] = useState(null);
 
+  const email = useRef(null);
+  const password = useRef(null);
+  const name = useRef(null);
 
-  const toggleSignInForm = ()=>{
+  const toggleSignInForm = () => {
     setIsSignInForm(!isSignInForm);
-  }
-  const handleValidation = ()=>{
-      console.log(email);
-      const message = checkValidate(email.current.value,password.current.value);
-      setErrorMessage(message);
-  }
+  };
+
+  const handleValidation = () => {
+    const message = checkValidate(
+      email.current.value,
+      password.current.value
+    );
+    setErrorMessage(message);
+    if (message) return;
+
+    if (!isSignInForm) {
+      // 🔹 Sign Up form
+      createUserWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then((userCredential) => {
+          const user = userCredential.user;
+
+          // Update display name & photo
+          updateProfile(auth.currentUser, {
+            displayName: name.current.value,
+            photoURL:
+              "https://i.pinimg.com/originals/0d/dc/ca/0ddccae723d85a703b798a5e682c23c1.png",
+          })
+            .then(() => {
+              const { uid, email, displayName, photoURL } = user;
+              dispatch(
+                addUser({
+                  uid,
+                  email,
+                  displayName,
+                  photoURL,
+                })
+              );
+              setIsSignInForm(!isSignInForm);
+              navigate("/");
+            })
+            .catch((error) => {
+              console.error("Profile update failed:", error);
+              setErrorMessage(error.message);
+            });
+        })
+        .catch((error) => {
+          setErrorMessage(error.code + " - " + error.message);
+        });
+    } else {
+      // 🔹 Sign In form
+      signInWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
+        .then(() => {
+          navigate("/browse");
+        })
+        .catch((error) => {
+          setErrorMessage(error.code + " - " + error.message);
+        });
+    }
+  };
 
   return (
     <div>
@@ -30,34 +98,42 @@ function Login() {
                    bg-cover"
       >
         <div className="bg-black/75 p-10 rounded w-full max-w-sm shadow-lg text-white">
-          <h1 className="text-3xl font-bold mb-6">{isSignInForm ? "Sign In" : "Sign Up"}</h1>
+          <h1 className="text-3xl font-bold mb-6">
+            {isSignInForm ? "Sign In" : "Sign Up"}
+          </h1>
 
-          <form 
-            onSubmit={(e)=>{e.preventDefault}}
-            className="space-y-6">
-            {/* Full name on signUp */}
-            {isSignInForm ||
-            <div className="relative">
-              <input
-                id="fullName"
-                name="fullName"
-                type="text"
-                placeholder=" "                        /* <- single space required */
-                className="peer w-full bg-gray-800 text-white rounded border border-gray-600
-                           px-3 pt-5 pb-2 placeholder-transparent
-                           focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600"
-                aria-label="Full Name"
-              />
-              <label
-                htmlFor="fullName"
-                className="absolute left-3 top-2 text-xs text-gray-400 transition-all duration-150
-                           transform origin-left pointer-events-none
-                           peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
-                           peer-focus:top-2 peer-focus:-translate-y-0 peer-focus:text-xs "
-              >
-                Full Name
-              </label>
-            </div> }
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleValidation();
+            }}
+            className="space-y-6"
+          >
+            {/* Full name only on SignUp */}
+            {!isSignInForm && (
+              <div className="relative">
+                <input
+                  ref={name}
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  placeholder=" "
+                  className="peer w-full bg-gray-800 text-white rounded border border-gray-600
+                             px-3 pt-5 pb-2 placeholder-transparent
+                             focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600"
+                  aria-label="Full Name"
+                />
+                <label
+                  htmlFor="fullName"
+                  className="absolute left-3 top-2 text-xs text-gray-400 transition-all duration-150
+                             transform origin-left pointer-events-none
+                             peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400
+                             peer-focus:top-2 peer-focus:-translate-y-0 peer-focus:text-xs "
+                >
+                  Full Name
+                </label>
+              </div>
+            )}
 
             {/* Email */}
             <div className="relative">
@@ -66,7 +142,7 @@ function Login() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder=" "                        /* <- single space required */
+                placeholder=" "
                 className="peer w-full bg-gray-800 text-white rounded border border-gray-600
                            px-3 pt-5 pb-2 placeholder-transparent
                            focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600"
@@ -81,7 +157,8 @@ function Login() {
               >
                 Email or phone number
               </label>
-            </div> 
+            </div>
+
             {/* Password */}
             <div className="relative">
               <input
@@ -89,7 +166,7 @@ function Login() {
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
-                placeholder=" "                        /* <- single space required */
+                placeholder=" "
                 className="peer w-full bg-gray-800 text-white rounded border border-gray-600
                            px-3 pt-5 pb-2 placeholder-transparent
                            focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600"
@@ -119,14 +196,21 @@ function Login() {
                 )}
               </button>
             </div>
-            <p className="text-xl text-red-600 font-sans italic">{errorMessage}</p>
-            <button 
-              onClick={handleValidation}
-              className="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-semibold">
-              Sign In
+
+            {/* Error */}
+            {errorMessage && (
+              <p className="text-sm text-red-500 font-medium">{errorMessage}</p>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-semibold"
+            >
+              {isSignInForm ? "Sign In" : "Sign Up"}
             </button>
           </form>
 
+          {/* Footer */}
           <div className="flex items-center justify-between text-sm my-6">
             <label className="flex items-center">
               <input type="checkbox" className="mr-2" /> Remember me
@@ -137,10 +221,12 @@ function Login() {
           </div>
 
           <div className="text-center text-sm" onClick={toggleSignInForm}>
-            <span className="text-gray-400">{isSignInForm ? "New to Netflix?" : "Already registered?"}</span>{" "}
-            <a href="#" className="text-white hover:underline">
-              {isSignInForm ? "Sign up now" :"Sign In now"}
-            </a>
+            <span className="text-gray-400">
+              {isSignInForm ? "New to Netflix?" : "Already registered?"}
+            </span>{" "}
+            <Link to="#" className="text-white hover:underline">
+              {isSignInForm ? "Sign up now" : "Sign In now"}
+            </Link>
           </div>
         </div>
       </div>
