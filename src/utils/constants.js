@@ -9,3 +9,7 @@ export const Api_options = {
   }
 };
 
+export const image_cdn = 
+  "https://image.tmdb.org/t/p/w500/";
+   
+
